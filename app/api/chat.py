@@ -4,6 +4,7 @@ from app.core.database import get_db
 from app.models.agent import Agent, Message, Conversation
 from app.schemas.agent import ChatResponse
 from app.services.openai_service import openai_service
+import aiofiles
 from pathlib import Path
 import uuid
 import shutil
@@ -11,7 +12,7 @@ import shutil
 router = APIRouter(prefix="/agents", tags=["Chat"])
 
 @router.post("/{agent_id}/chat", response_model=ChatResponse)
-def chat_with_agent(
+async def chat_with_agent(
     agent_id: int, 
     message: str = Form(...), 
     generate_audio: bool = Form(False),
@@ -33,7 +34,7 @@ def chat_with_agent(
 
     # 3. Get AI Response
     try:
-        response_text = openai_service.get_chat_response(
+        response_text = await openai_service.get_chat_response(
             agent.system_prompt, 
             [{"role": "user", "content": message}]
         )
@@ -41,7 +42,7 @@ def chat_with_agent(
         audio_path = None
         audio_url = None
         if generate_audio:
-            audio_path = openai_service.generate_speech(response_text, agent.voice_id)
+            audio_path = await openai_service.generate_speech(response_text, agent.voice_id)
             audio_url = f"/static/{Path(audio_path).name}"
         
         # 4. Save messages to DB
@@ -78,8 +79,9 @@ async def voice_chat_with_agent(
     temp_dir.mkdir(exist_ok=True)
     temp_path = temp_dir / f"{uuid.uuid4()}_{audio.filename}"
     
-    with temp_path.open("wb") as buffer:
-        shutil.copyfileobj(audio.file, buffer)
+    async with aiofiles.open(temp_path, "wb") as buffer:
+        content = await audio.read()
+        await buffer.write(content)
         
     # 3. Manage Conversation
     conversation = db.query(Conversation).filter(Conversation.agent_id == agent_id).first()
@@ -91,10 +93,10 @@ async def voice_chat_with_agent(
 
     try:
         # 4. Transcribe STT
-        transcribed_text = openai_service.transcribe_audio(str(temp_path))
+        transcribed_text = await openai_service.transcribe_audio(str(temp_path))
         
         # 5. Get Agent Response
-        response_text = openai_service.get_chat_response(
+        response_text = await openai_service.get_chat_response(
             agent.system_prompt, 
             [{"role": "user", "content": transcribed_text}]
         )
@@ -103,7 +105,7 @@ async def voice_chat_with_agent(
         audio_path = None
         audio_url = None
         if generate_audio:
-            audio_path = openai_service.generate_speech(response_text, agent.voice_id)
+            audio_path = await openai_service.generate_speech(response_text, agent.voice_id)
             audio_url = f"/static/{Path(audio_path).name}"
         
         # 7. Save messages to DB

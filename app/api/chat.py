@@ -22,21 +22,43 @@ def chat_with_agent(
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     
-    # 2. Get AI Response
-    # In a real app we would maintain conversation state, for assessment let's keep it simple
+    # 2. Manage Conversation
+    # In a real app we would pass conversation_id, for this assessment we create/get one
+    conversation = db.query(Conversation).filter(Conversation.agent_id == agent_id).first()
+    if not conversation:
+        conversation = Conversation(agent_id=agent_id)
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
+    # 3. Get AI Response
     try:
         response_text = openai_service.get_chat_response(
             agent.system_prompt, 
             [{"role": "user", "content": message}]
         )
         
+        audio_path = None
         audio_url = None
         if generate_audio:
             audio_path = openai_service.generate_speech(response_text, agent.voice_id)
             audio_url = f"/static/{Path(audio_path).name}"
+        
+        # 4. Save messages to DB
+        user_msg = Message(conversation_id=conversation.id, role="user", content=message)
+        assistant_msg = Message(
+            conversation_id=conversation.id, 
+            role="assistant", 
+            content=response_text,
+            audio_path=audio_path
+        )
+        db.add(user_msg)
+        db.add(assistant_msg)
+        db.commit()
             
         return ChatResponse(response=response_text, audio_url=audio_url)
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
 
 @router.post("/{agent_id}/voice-chat", response_model=ChatResponse)
@@ -59,24 +81,46 @@ async def voice_chat_with_agent(
     with temp_path.open("wb") as buffer:
         shutil.copyfileobj(audio.file, buffer)
         
+    # 3. Manage Conversation
+    conversation = db.query(Conversation).filter(Conversation.agent_id == agent_id).first()
+    if not conversation:
+        conversation = Conversation(agent_id=agent_id)
+        db.add(conversation)
+        db.commit()
+        db.refresh(conversation)
+
     try:
-        # 3. Transcribe STT
+        # 4. Transcribe STT
         transcribed_text = openai_service.transcribe_audio(str(temp_path))
         
-        # 4. Get Agent Response
+        # 5. Get Agent Response
         response_text = openai_service.get_chat_response(
             agent.system_prompt, 
             [{"role": "user", "content": transcribed_text}]
         )
         
-        # 5. Generate TTS
+        # 6. Generate TTS
+        audio_path = None
         audio_url = None
         if generate_audio:
             audio_path = openai_service.generate_speech(response_text, agent.voice_id)
             audio_url = f"/static/{Path(audio_path).name}"
+        
+        # 7. Save messages to DB
+        user_msg = Message(conversation_id=conversation.id, role="user", content=transcribed_text)
+        assistant_msg = Message(
+            conversation_id=conversation.id, 
+            role="assistant", 
+            content=response_text,
+            audio_path=audio_path
+        )
+        db.add(user_msg)
+        db.add(assistant_msg)
+        db.commit()
             
         return ChatResponse(response=response_text, audio_url=audio_url)
     except Exception as e:
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
     finally:
         # Cleanup

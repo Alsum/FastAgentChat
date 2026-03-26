@@ -1,0 +1,25 @@
+# Virtual Environment
+.venv/
+__pycache__/
+*.pyc
+
+# Environment Variables
+.env
+
+# Database
+fast_agent_chat.db
+test.db
+test_chat.db
+test.sqlite
+
+# Media & Temp Files
+media/*.mp3
+temp/
+media/*.wav
+
+# IDE Settings
+.idea/
+.vscode/
+
+# Static Assets
+static/

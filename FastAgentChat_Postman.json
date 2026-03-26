@@ -1,0 +1,224 @@
+{
+	"info": {
+		"_postman_id": "a90a2936-7e44-482c-b258-0676449197c3",
+		"name": "FastAgentChat",
+		"description": "API collection for the AI Agent Platform Backend.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Agents",
+			"item": [
+				{
+					"name": "Create Agent",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Philosophical Thinker\",\n    \"system_prompt\": \"You are a deep philosopher exploring the meaning of life and existence.\",\n    \"voice_id\": \"onyx\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/agents/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Agents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/agents/",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								""
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Agent",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/agents/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Agent",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Deep Thinker\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/agents/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Agent",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/agents/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Interaction",
+			"item": [
+				{
+					"name": "Chat (Text)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "message",
+									"value": "What is the meaning of life?",
+									"type": "text"
+								},
+								{
+									"key": "generate_audio",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/agents/1/chat",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								"1",
+								"chat"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Voice Chat",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "audio",
+									"description": "Select an audio file",
+									"type": "file",
+									"src": ""
+								},
+								{
+									"key": "generate_audio",
+									"value": "true",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/agents/1/voice-chat",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								"1",
+								"voice-chat"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}

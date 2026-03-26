@@ -1,33 +1,36 @@
-### Create an Agent
+### 1. Create an Agent
 POST http://localhost:8000/agents/
 Content-Type: application/json
 
 {
-    "name": "Storyteller",
+    "name": "Expert Storyteller",
     "system_prompt": "You are a creative storyteller. Tell short, engaging stories based on user prompts.",
     "voice_id": "shimmer"
 }
 
-### List Agents
+### 2. List Agents
 GET http://localhost:8000/agents/
 
-### Get Agent
-GET http://localhost:8000/agents/1
+### 3. Start a new Chat Session
+POST http://localhost:8000/agents/1/sessions
 
-### Update Agent
-PATCH http://localhost:8000/agents/1
-Content-Type: application/json
+### 4. List Agent Sessions
+GET http://localhost:8000/agents/1/sessions
 
-{
-    "name": "Creative Bard"
-}
+### 5. Chat within the Session (Text)
+# Use the session ID from step 3 (e.g., 1)
+POST http://localhost:8000/agents/1/sessions/1/chat
+Content-Type: multipart/form-data; boundary=boundary
 
-### Chat with Agent (Text)
-POST http://localhost:8000/agents/1/chat
-# Content-Type: multipart/form-data
-# Form Parameter: message="Tell me a story about a brave knight."
+--boundary
+Content-Disposition: form-data; name="message"
 
-### Voice Chat (Mocking an upload would require a file)
-# POST http://localhost:8000/agents/1/voice-chat
-# Content-Type: multipart/form-data
-# Form Parameter: audio=@path/to/audio.wav
+Hello agent! Can you tell me a story about a brave cat?
+--boundary
+Content-Disposition: form-data; name="generate_audio"
+
+true
+--boundary--
+
+### 6. Get Session Details and History
+GET http://localhost:8000/agents/1/sessions/1

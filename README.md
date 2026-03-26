@@ -77,11 +77,18 @@ Documentation is auto-generated at [http://localhost:8000/docs](http://localhost
 | `PATCH` | `/agents/{id}` | Update agent name, prompt, or voice. |
 | `DELETE` | `/agents/{id}` | Remove an agent from the platform. |
 
+### Session Management
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/agents/{id}/sessions` | Start a new chat session for an agent. |
+| `GET` | `/agents/{id}/sessions` | List all chat sessions for an agent. |
+| `GET` | `/agents/{id}/sessions/{sid}` | Retrieve session details and message history. |
+
 ### AI Interaction
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| `POST` | `/agents/{id}/chat` | Text-based conversation. Returns AI text and optional TTS audio. |
-| `POST` | `/agents/{id}/voice-chat` | Voice-to-voice interaction. Upload audio, get audio response back. |
+| `POST` | `/agents/{id}/sessions/{sid}/chat` | Text talk within a specific session. Includes 10-message history context. |
+| `POST` | `/agents/{id}/sessions/{sid}/voice-chat` | Voice talk within a session. STT -> LLM -> TTS pipeline. |
 
 ---
 

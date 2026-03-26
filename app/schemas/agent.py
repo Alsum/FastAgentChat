@@ -29,3 +29,22 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     audio_url: Optional[str] = None
+
+class MessageResponse(BaseModel):
+    id: int
+    role: str
+    content: str
+    audio_path: Optional[str] = None
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+class SessionResponse(BaseModel):
+    id: int
+    agent_id: int
+    created_at: datetime
+    messages: List[MessageResponse] = []
+    
+    class Config:
+        from_attributes = True

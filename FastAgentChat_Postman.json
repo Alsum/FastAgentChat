@@ -53,64 +53,64 @@
 						}
 					},
 					"response": []
+				}
+			]
+		},
+		{
+			"name": "Sessions",
+			"item": [
+				{
+					"name": "Start Session",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/agents/1/sessions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"agents",
+								"1",
+								"sessions"
+							]
+						}
+					},
+					"response": []
 				},
 				{
-					"name": "Get Agent",
+					"name": "List Sessions",
 					"request": {
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/agents/1",
+							"raw": "{{baseUrl}}/agents/1/sessions",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"agents",
-								"1"
+								"1",
+								"sessions"
 							]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Update Agent",
+					"name": "Get Session History",
 					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"name\": \"Deep Thinker\"\n}"
-						},
-						"url": {
-							"raw": "{{baseUrl}}/agents/1",
-							"host": [
-								"{{baseUrl}}"
-							],
-							"path": [
-								"agents",
-								"1"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Delete Agent",
-					"request": {
-						"method": "DELETE",
+						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{baseUrl}}/agents/1",
+							"raw": "{{baseUrl}}/agents/1/sessions/1",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"agents",
+								"1",
+								"sessions",
 								"1"
 							]
 						}
@@ -143,12 +143,14 @@
 							]
 						},
 						"url": {
-							"raw": "{{baseUrl}}/agents/1/chat",
+							"raw": "{{baseUrl}}/agents/1/sessions/1/chat",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"agents",
+								"1",
+								"sessions",
 								"1",
 								"chat"
 							]
@@ -178,12 +180,14 @@
 							]
 						},
 						"url": {
-							"raw": "{{baseUrl}}/agents/1/voice-chat",
+							"raw": "{{baseUrl}}/agents/1/sessions/1/voice-chat",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"agents",
+								"1",
+								"sessions",
 								"1",
 								"voice-chat"
 							]
@@ -192,26 +196,6 @@
 					"response": []
 				}
 			]
-		}
-	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					""
-				]
-			}
 		}
 	],
 	"variable": [

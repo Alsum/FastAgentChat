@@ -2,41 +2,75 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.agent import Agent, Message, Conversation
-from app.schemas.agent import ChatResponse
+from app.schemas.agent import ChatResponse, SessionResponse
 from app.services.openai_service import openai_service
-import aiofiles
 from pathlib import Path
 import uuid
-import shutil
+import aiofiles
+from typing import List
 
-router = APIRouter(prefix="/agents", tags=["Chat"])
+router = APIRouter(prefix="/agents", tags=["Sessions & Chat"])
 
-@router.post("/{agent_id}/chat", response_model=ChatResponse)
-async def chat_with_agent(
-    agent_id: int, 
-    message: str = Form(...), 
-    generate_audio: bool = Form(False),
-    db: Session = Depends(get_db)
-):
-    # 1. Fetch Agent
+@router.post("/{agent_id}/sessions", response_model=SessionResponse)
+def start_session(agent_id: int, db: Session = Depends(get_db)):
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
     
-    # 2. Manage Conversation
-    # In a real app we would pass conversation_id, for this assessment we create/get one
-    conversation = db.query(Conversation).filter(Conversation.agent_id == agent_id).first()
-    if not conversation:
-        conversation = Conversation(agent_id=agent_id)
-        db.add(conversation)
-        db.commit()
-        db.refresh(conversation)
+    session = Conversation(agent_id=agent_id)
+    db.add(session)
+    db.commit()
+    db.refresh(session)
+    return session
+
+@router.get("/{agent_id}/sessions", response_model=List[SessionResponse])
+def list_sessions(agent_id: int, db: Session = Depends(get_db)):
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    return db.query(Conversation).filter(Conversation.agent_id == agent_id).all()
+
+@router.get("/{agent_id}/sessions/{session_id}", response_model=SessionResponse)
+def get_session(agent_id: int, session_id: int, db: Session = Depends(get_db)):
+    session = db.query(Conversation).filter(
+        Conversation.id == session_id,
+        Conversation.agent_id == agent_id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
+
+@router.post("/{agent_id}/sessions/{session_id}/chat", response_model=ChatResponse)
+async def chat_with_agent(
+    agent_id: int,
+    session_id: int,
+    message: str = Form(...), 
+    generate_audio: bool = Form(False),
+    db: Session = Depends(get_db)
+):
+    # 1. Fetch Agent and Session
+    agent = db.query(Agent).filter(Agent.id == agent_id).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    
+    session = db.query(Conversation).filter(
+        Conversation.id == session_id,
+        Conversation.agent_id == agent_id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found for this agent")
+    
+    # 2. Prepare context from history
+    # Fetch last 10 messages for context (simple memory)
+    history = db.query(Message).filter(Message.conversation_id == session_id).order_by(Message.created_at.asc()).all()
+    messages_context = [{"role": m.role, "content": m.content} for m in history]
 
     # 3. Get AI Response
     try:
         response_text = await openai_service.get_chat_response(
             agent.system_prompt, 
-            [{"role": "user", "content": message}]
+            messages_context + [{"role": "user", "content": message}]
         )
         
         audio_path = None
@@ -46,9 +80,9 @@ async def chat_with_agent(
             audio_url = f"/static/{Path(audio_path).name}"
         
         # 4. Save messages to DB
-        user_msg = Message(conversation_id=conversation.id, role="user", content=message)
+        user_msg = Message(conversation_id=session.id, role="user", content=message)
         assistant_msg = Message(
-            conversation_id=conversation.id, 
+            conversation_id=session.id, 
             role="assistant", 
             content=response_text,
             audio_path=audio_path
@@ -62,17 +96,25 @@ async def chat_with_agent(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"OpenAI Error: {str(e)}")
 
-@router.post("/{agent_id}/voice-chat", response_model=ChatResponse)
+@router.post("/{agent_id}/sessions/{session_id}/voice-chat", response_model=ChatResponse)
 async def voice_chat_with_agent(
-    agent_id: int, 
+    agent_id: int,
+    session_id: int,
     audio: UploadFile = File(...), 
     generate_audio: bool = Form(True),
     db: Session = Depends(get_db)
 ):
-    # 1. Fetch Agent
+    # 1. Fetch Agent and Session
     agent = db.query(Agent).filter(Agent.id == agent_id).first()
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
+    
+    session = db.query(Conversation).filter(
+        Conversation.id == session_id,
+        Conversation.agent_id == agent_id
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found for this agent")
 
     # 2. Save uploaded audio temporarily
     temp_dir = Path("temp")
@@ -83,22 +125,18 @@ async def voice_chat_with_agent(
         content = await audio.read()
         await buffer.write(content)
         
-    # 3. Manage Conversation
-    conversation = db.query(Conversation).filter(Conversation.agent_id == agent_id).first()
-    if not conversation:
-        conversation = Conversation(agent_id=agent_id)
-        db.add(conversation)
-        db.commit()
-        db.refresh(conversation)
-
     try:
-        # 4. Transcribe STT
+        # 3. Transcribe STT
         transcribed_text = await openai_service.transcribe_audio(str(temp_path))
         
+        # 4. Fetch context
+        history = db.query(Message).filter(Message.conversation_id == session_id).order_by(Message.created_at.asc()).all()
+        messages_context = [{"role": m.role, "content": m.content} for m in history]
+
         # 5. Get Agent Response
         response_text = await openai_service.get_chat_response(
             agent.system_prompt, 
-            [{"role": "user", "content": transcribed_text}]
+            messages_context + [{"role": "user", "content": transcribed_text}]
         )
         
         # 6. Generate TTS
@@ -109,9 +147,9 @@ async def voice_chat_with_agent(
             audio_url = f"/static/{Path(audio_path).name}"
         
         # 7. Save messages to DB
-        user_msg = Message(conversation_id=conversation.id, role="user", content=transcribed_text)
+        user_msg = Message(conversation_id=session.id, role="user", content=transcribed_text)
         assistant_msg = Message(
-            conversation_id=conversation.id, 
+            conversation_id=session.id, 
             role="assistant", 
             content=response_text,
             audio_path=audio_path

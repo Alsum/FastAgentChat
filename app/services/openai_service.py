@@ -8,6 +8,7 @@ from typing import List, Dict
 
 class OpenAIService:
     def __init__(self):
+        print(settings.OPENAI_API_KEY)
         self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         # Directory for media storage
         self.media_dir = Path("media")
